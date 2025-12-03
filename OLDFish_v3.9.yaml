@@ -87,7 +87,7 @@ profile:
 
 unified-delay: true
 # [修正] 暂时注释掉 tcp-concurrent。
-# 原因：您下方开启了 mux (多路复用)，这两者同时开启会在 Verge 导入时产生类型冲突报错。
+# 原因：下方开启了 mux (多路复用)，这两者同时开启会在 Verge 导入时产生类型冲突报错。
 # 实际上 Meta 内核开启 Mux 后会自动接管并发，注释此行不影响性能，且能解决报错。
 # tcp-concurrent: true
 
@@ -141,7 +141,7 @@ proxies:
   - name: 拒绝
     type: reject
 
-# [保留] MUX 多路复用 (您需要的强悍功能)
+# [保留] MUX 多路复用 (需要的强悍功能)
 mux:
   enable: true
   protocol: h2mux
@@ -820,3 +820,4 @@ tun:
     - tcp://any:853
   auto-redirect: false
   endpoint-independent-nat: true
+
