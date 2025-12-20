@@ -1,9 +1,10 @@
 # ---------------------------------------------------
-# 终极优化 - v3.9.2 
-# Optimized with: QUIC阻断(适配Mux) + 广告拦截 + 路径修正 + 链接防误报
+# 终极优化 - v4.0 
+# Base: OLDFish
+# Optimized: Mux防断流 + STUN直连 + 广告拦截 + 数据库精简 + TCP保活
 # ---------------------------------------------------
-
 # [代理订阅 Provider]
+
 proxy-providers:
   订阅1:
     type: http
@@ -15,7 +16,6 @@ proxy-providers:
       enable: true
       interval: 300
       url: https://cp.cloudflare.com/generate_204
-    # [优化] 排除过滤器
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
       additional-prefix: '[订阅1]'
@@ -36,8 +36,8 @@ proxy-providers:
       additional-prefix: '[订阅2]'
       skip-cert-verify: true
       udp: true
-
-# [基础端口设置]
+      
+# [基础设置]
 port: 7890
 socks-port: 7891
 redir-port: 7892
@@ -48,7 +48,18 @@ mode: rule
 log-level: info
 ipv6: true
 
-# [优化] 全局 TLS 指纹
+# [核心优化：数据库与连接]
+geodata-mode: true
+geodata-loader: memconservative
+geo-auto-update: true
+geo-update-interval: 24
+geox-url:
+  geoip: "https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/release/geoip.dat"
+  geosite: "https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/release/geosite.dat"
+  mmdb: "https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/release/country.mmdb"
+
+tcp-concurrent: true
+keep-alive-interval: 15
 global-client-fingerprint: chrome
 
 # [优化] 域名嗅探器
@@ -87,17 +98,17 @@ dns:
   use-hosts: true
   use-system-hosts: true
   
-  # 默认 DNS (国内优选)
+  # 默认 DNS
   nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
   
-  # 代理 DNS (解析节点域名)
+  # 代理 DNS
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
     
-  # 策略分流 (Meta 核心)
+  # 策略分流
   nameserver-policy:
     "geosite:cn,private":
       - https://dns.alidns.com/dns-query
@@ -126,6 +137,7 @@ proxies:
     type: reject
 
 # [MUX 多路复用]
+# 注意：如果主力节点是 Hysteria2/Tuic，建议将 enable 改为 false
 mux:
   enable: true
   protocol: h2mux
@@ -154,12 +166,11 @@ default:
   type: select
 
 # ==============================================
-# 策略组 (Proxy Groups)
+# 策略组
 # ==============================================
 proxy-groups:
   - name: ♻️ 订阅更新
     type: fallback
-    # [优化] 使用 Apple URL，防止fallback到直连时显示超时
     url: "http://www.apple.com/library/test/success.html"
     interval: 300
     proxies:
@@ -531,7 +542,6 @@ proxy-groups:
 
 # [规则提供者]
 rule-providers:
-  # [新增] 广告拦截规则源 (Meta 官方维护)
   Ads:
     behavior: domain
     format: mrs
@@ -540,7 +550,6 @@ rule-providers:
     interval: 86400
     type: http
     download-detour: ♻️ 订阅更新
-  
   AI_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -778,16 +787,10 @@ rule-providers:
 # 分流规则
 # ==============================================
 rules:
-  # [重点] 拒绝 UDP 443 (QUIC)，强制 Youtube/Netflix 走 TCP，从而享受 Mux 多路复用加速
   - AND,((NETWORK,UDP),(DST-PORT,443)),拒绝
-
-  # [常规] NTP 和 STUN 直连
   - AND,((NETWORK,UDP),(DST-PORT,123)),直连
-  - AND,((NETWORK,UDP),(DST-PORT,3478)),直连
-  
-  # [新增] 广告拦截
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),直连  
   - RULE-SET,Ads,拒绝
-  
   - RULE-SET,Check_Domain,Check 测速
   - RULE-SET,AI_Domain,AI（全）
   - RULE-SET,GitHub_Domain,GitHub
@@ -830,5 +833,3 @@ tun:
     - tcp://any:853
   auto-redirect: false
   endpoint-independent-nat: true
-  
-
