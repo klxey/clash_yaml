@@ -1,10 +1,11 @@
 # ---------------------------------------------------
-# 终极优化 - v4.0 
-# Base: OLDFish
-# Optimized: Mux防断流 + STUN直连 + 广告拦截 + 数据库精简 + TCP保活
+# 终极优化 - v4.2 
+# Base: OLDFish v4.2
+# Fixes: 修复了v4.1中定义了规则源但未应用的问题 (Reddit/Nvidia/Crunchyroll)
+# Optimized: 调整规则顺序，DNS微调
 # ---------------------------------------------------
-# [代理订阅 Provider]
 
+# [代理订阅 Provider]
 proxy-providers:
   订阅1:
     type: http
@@ -19,8 +20,9 @@ proxy-providers:
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
       additional-prefix: '[订阅1]'
-      skip-cert-verify: true
+      skip-cert-verify: false
       udp: true
+
   订阅2:
     type: http
     url: 订阅链接2
@@ -34,9 +36,9 @@ proxy-providers:
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
       additional-prefix: '[订阅2]'
-      skip-cert-verify: true
+      skip-cert-verify: false
       udp: true
-      
+
 # [基础设置]
 port: 7890
 socks-port: 7891
@@ -97,25 +99,25 @@ dns:
   respect-rules: true
   use-hosts: true
   use-system-hosts: true
-  
-  # 默认 DNS
+
+  # 默认 DNS (主要解析国内，国外走 Policy)
   nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-  
-  # 代理 DNS
+
+  # 代理 DNS (用于节点握手)
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-    
-  # 策略分流
+
+  # 策略分流 (核心 DNS 逻辑)
   nameserver-policy:
     "geosite:cn,private":
       - https://dns.alidns.com/dns-query
       - https://doh.pub/dns-query
     "geosite:google,youtube,telegram,gfw,geolocation-!cn":
-      - https://8.8.8.8/dns-query
-      - https://1.1.1.1/dns-query
+      - https://dns.google/dns-query
+      - https://cloudflare-dns.com/dns-query
 
   fake-ip-filter:
     - +.lan
@@ -137,9 +139,9 @@ proxies:
     type: reject
 
 # [MUX 多路复用]
-# 注意：如果主力节点是 Hysteria2/Tuic，建议将 enable 改为 false
+# 建议：大部分情况下保持 false。仅在节点明确支持且你需要降低高并发延迟时开启。
 mux:
-  enable: true
+  enable: false
   protocol: h2mux
   max-connections: 8
   min-streams: 4
@@ -171,7 +173,7 @@ default:
 proxy-groups:
   - name: ♻️ 订阅更新
     type: fallback
-    url: "http://www.apple.com/library/test/success.html"
+    url: https://cp.cloudflare.com/generate_204
     interval: 300
     proxies:
       - 直连
@@ -179,6 +181,7 @@ proxy-groups:
       - 香港-自动
       - 日本-自动
       - 台湾-自动
+
   - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png
     name: AI（全）
     proxies: *id001
@@ -201,6 +204,10 @@ proxy-groups:
     type: select
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/facebook.png
     name: Facebook 脸书
+    proxies: *id001
+    type: select
+  - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/reddit.png
+    name: Reddit
     proxies: *id001
     type: select
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/youtube.png
@@ -259,6 +266,7 @@ proxy-groups:
     name: 漏网之鱼
     proxies: *id001
     type: select
+
   - filter: ^((?!(直连|拒绝)).)*$
     icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/all.png
     include-all: true
@@ -267,6 +275,7 @@ proxy-groups:
     tolerance: 30
     type: select
     url: https://cp.cloudflare.com/generate_204
+
   - filter: ^((?!(直连|拒绝)).)*$
     icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/all.png
     include-all: true
@@ -277,6 +286,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/home.png
     interval: 300
     lazy: false
@@ -286,11 +296,13 @@ proxy-groups:
       - 家宽-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(家宽)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 家宽-手动
     type: select
+
   - filter: (?=.*(家宽)).*$
     icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/Auto.png
     include-all: true
@@ -301,6 +313,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Hongkong.png
     interval: 300
     lazy: false
@@ -310,11 +323,13 @@ proxy-groups:
       - 香港-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 香港-手动
     type: select
+
   - filter: (?=.*(广港|香港|HK|Hong Kong|🇭🇰|HongKong)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -325,6 +340,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Taiwan_China.png
     interval: 300
     lazy: false
@@ -334,11 +350,13 @@ proxy-groups:
       - 台湾-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 台湾-手动
     type: select
+
   - filter: (?=.*(广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -349,6 +367,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Japan.png
     interval: 300
     lazy: false
@@ -358,11 +377,13 @@ proxy-groups:
       - 日本-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 日本-手动
     type: select
+
   - filter: (?=.*(广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -373,6 +394,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Singapore.png
     interval: 300
     lazy: false
@@ -382,11 +404,13 @@ proxy-groups:
       - 新加坡-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广新|新加坡|SG|坡|狮城|🇸🇬|Singapore)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 新加坡-手动
     type: select
+
   - filter: (?=.*(广新|新加坡|SG|坡|狮城|🇸🇬|Singapore)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -397,6 +421,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Korea.png
     interval: 300
     lazy: false
@@ -406,11 +431,13 @@ proxy-groups:
       - 韩国-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 韩国-手动
     type: select
+
   - filter: (?=.*(广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -421,6 +448,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/America.png
     interval: 300
     lazy: false
@@ -430,11 +458,13 @@ proxy-groups:
       - 美国-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 美国-手动
     type: select
+
   - filter: (?=.*(广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -445,6 +475,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Germany.png
     interval: 300
     lazy: false
@@ -454,11 +485,13 @@ proxy-groups:
       - 德国-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(德国|德|DE|Germany|🇩🇪)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 德国-手动
     type: select
+
   - filter: (?=.*(德国|德|DE|Germany|🇩🇪)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -469,6 +502,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/uk.png
     interval: 300
     lazy: false
@@ -478,11 +512,13 @@ proxy-groups:
       - 英国-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: (?=.*(英国|英|伦敦|UK|United Kingdom|🇬🇧|London)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 英国-手动
     type: select
+
   - filter: (?=.*(英国|英|伦敦|UK|United Kingdom|🇬🇧|London)).*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -493,6 +529,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://fastly.jsdelivr.net/gh/Koolson/Qure@master/IconSet/Color/Global.png
     interval: 300
     lazy: false
@@ -502,11 +539,13 @@ proxy-groups:
       - 小众地区-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|德国|德|DE|Germany|🇩🇪|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 小众地区-手动
     type: select
+
   - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|德国|德|DE|Germany|🇩🇪|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
@@ -517,6 +556,7 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/emby.png
     interval: 300
     lazy: false
@@ -526,10 +566,12 @@ proxy-groups:
       - Emby影视-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
+
   - icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: Emby影视-手动
     type: select
+
   - icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
     interval: 300
@@ -550,6 +592,7 @@ rule-providers:
     interval: 86400
     type: http
     download-detour: ♻️ 订阅更新
+
   AI_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -558,6 +601,7 @@ rule-providers:
     path: rules/AI_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geosite/category-ai-!cn.mrs
+
   Amazon_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -566,6 +610,7 @@ rule-providers:
     path: rules/Amazon_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/amazon.mrs
+
   Apple_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -574,6 +619,7 @@ rule-providers:
     path: rules/Apple_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/apple.mrs
+
   Check_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -582,6 +628,7 @@ rule-providers:
     path: rules/Check_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Check.list
+
   China_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -590,6 +637,7 @@ rule-providers:
     path: rules/China_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/cn.mrs
+
   China_IP:
     behavior: ipcidr
     download-detour: ♻️ 订阅更新
@@ -598,6 +646,7 @@ rule-providers:
     path: rules/China_IP.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geoip/cn.mrs
+
   Crunchyroll_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -606,6 +655,7 @@ rule-providers:
     path: rules/Crunchyroll_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Crunchyroll.list
+
   Direct_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -614,6 +664,7 @@ rule-providers:
     path: rules/Direct_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/liandu2024/clash/refs/heads/main/list/Direct.list
+
   Disney_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -622,6 +673,7 @@ rule-providers:
     path: rules/Disney_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/disney.mrs
+
   Emby_Domain:
     type: http
     behavior: classical
@@ -630,6 +682,7 @@ rule-providers:
     url: "https://gh-proxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Emby/Emby.list"
     interval: 86400
     download-detour: ♻️ 订阅更新
+
   Facebook_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -638,6 +691,7 @@ rule-providers:
     path: rules/Facebook_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/facebook.mrs
+
   GitHub_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -646,6 +700,7 @@ rule-providers:
     path: rules/GitHub_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/github.mrs
+
   Global_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -654,6 +709,7 @@ rule-providers:
     path: rules/Global_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Global/Global.list
+
   Google_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -662,6 +718,7 @@ rule-providers:
     path: rules/Google_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/google.mrs
+
   Google_IP:
     behavior: ipcidr
     download-detour: ♻️ 订阅更新
@@ -670,6 +727,7 @@ rule-providers:
     path: rules/Google_IP.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geoip/google.mrs
+
   IP_Rules:
     behavior: ipcidr
     download-detour: ♻️ 订阅更新
@@ -678,6 +736,7 @@ rule-providers:
     path: rules/IP_Rules.mrs
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/refs/heads/meta/geo/geoip/private.mrs
+
   Microsoft_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -686,6 +745,7 @@ rule-providers:
     path: rules/Microsoft_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/microsoft.mrs
+
   Netflix_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -694,6 +754,7 @@ rule-providers:
     path: rules/Netflix_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/netflix.mrs
+
   Netflix_IP:
     behavior: ipcidr
     download-detour: ♻️ 订阅更新
@@ -702,6 +763,7 @@ rule-providers:
     path: rules/Netflix_IP.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geoip/netflix.mrs
+
   Nvidia_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -710,6 +772,7 @@ rule-providers:
     path: rules/Nvidia_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Nvidia/Nvidia.list
+
   Private_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -718,6 +781,7 @@ rule-providers:
     path: rules/Private_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/private.mrs
+
   Reddit_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -726,6 +790,7 @@ rule-providers:
     path: rules/Reddit_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/reddit.mrs
+
   Spotify_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -734,6 +799,7 @@ rule-providers:
     path: rules/Spotify_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/spotify.mrs
+
   Telegram_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -742,6 +808,7 @@ rule-providers:
     path: rules/Telegram_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/telegram.mrs
+
   Telegram_IP:
     behavior: ipcidr
     download-detour: ♻️ 订阅更新
@@ -750,6 +817,7 @@ rule-providers:
     path: rules/Telegram_IP.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geoip/telegram.mrs
+
   TikTok_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -758,6 +826,7 @@ rule-providers:
     path: rules/TikTok_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/tiktok.mrs
+
   Twitter_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -766,6 +835,7 @@ rule-providers:
     path: rules/Twitter_Domain.mrs
     type: http
     url: https://gh-proxy.com/https://github.com/metacubex/meta-rules-dat/raw/refs/heads/meta/geo/geosite/x.mrs
+
   WhatsApp_Domain:
     behavior: classical
     download-detour: ♻️ 订阅更新
@@ -774,6 +844,7 @@ rule-providers:
     path: rules/WhatsApp_Domain.list
     type: http
     url: https://gh-proxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Whatsapp/Whatsapp.list
+
   Youtube_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -787,11 +858,15 @@ rule-providers:
 # 分流规则
 # ==============================================
 rules:
-  - AND,((NETWORK,UDP),(DST-PORT,443)),拒绝
+  # 基础规则
   - AND,((NETWORK,UDP),(DST-PORT,123)),直连
-  - AND,((NETWORK,UDP),(DST-PORT,3478)),直连  
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),直连
   - RULE-SET,Ads,拒绝
+  
+  # 测速规则 (提前匹配)
   - RULE-SET,Check_Domain,Check 测速
+  
+  # 应用分流
   - RULE-SET,AI_Domain,AI（全）
   - RULE-SET,GitHub_Domain,GitHub
   - RULE-SET,Telegram_Domain,Telegram 纸飞机
@@ -799,9 +874,12 @@ rules:
   - RULE-SET,Twitter_Domain,Twitter(X) 推特
   - RULE-SET,WhatsApp_Domain,WhatsApp
   - RULE-SET,Facebook_Domain,Facebook 脸书
+  - RULE-SET,Reddit_Domain,Reddit
   - RULE-SET,Amazon_Domain,Amazon 亚马逊
   - RULE-SET,Apple_Domain,Apple 苹果
   - RULE-SET,Microsoft_Domain,Microsoft 微软
+  
+  # 媒体分流
   - RULE-SET,Youtube_Domain,YouTube 油管
   - RULE-SET,TikTok_Domain,TikTok
   - RULE-SET,Netflix_Domain,Netflix 奈飞
@@ -809,8 +887,16 @@ rules:
   - RULE-SET,Emby_Domain,Emby 影视
   - RULE-SET,Disney_Domain,Disney 迪斯尼
   - RULE-SET,Spotify_Domain,Spotify 音乐 博客
+  - RULE-SET,Crunchyroll_Domain,国外 # 之前遗漏
+  
+  # 硬件与驱动
+  - RULE-SET,Nvidia_Domain,直连 # 之前遗漏，通常驱动下载直连更快，如需代理可改为“国外”
+  
+  # 谷歌服务
   - RULE-SET,Google_Domain,Google 谷歌
   - RULE-SET,Google_IP,Google 谷歌,no-resolve
+  
+  # 兜底规则
   - RULE-SET,Global_Domain,国外
   - RULE-SET,Direct_Domain,国内
   - RULE-SET,China_Domain,国内
