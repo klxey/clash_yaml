@@ -1,38 +1,13 @@
 # ---------------------------------------------------
-# 终极优化 - v3.9
-# Base: OLDFish 完美终极版 此版本为自用 禁止买卖
-# Optimized with: 终极优化 + 低延迟 + 极速重连 + 修复空URL Bug + 全局指纹防止被墙 
-# 增加TLS指纹 + 优化DNS逻辑 + TUN增强 + 图标修复 + 防止DNS泄露 + 防止流量逃逸
-# 新增: MUX多路复用 + 健康检查URL优化 + 防漏逻辑 + 增加国内的 DoH 或 IP 作为兜底
-# V3.9增加直连无法下载节点自动转为代理更新下载
-# Kernel: Mihomo (Clash Meta)
-# Date: 2025.12.01
+# 终极优化 - v3.9.2 
+# Optimized with: QUIC阻断(适配Mux) + 广告拦截 + 路径修正 + 链接防误报
 # ---------------------------------------------------
-# [代理订阅 Provider - 已优化长连接] 
 
+# [代理订阅 Provider]
 proxy-providers:
-  订阅显示名1:
+  订阅1:
     type: http
-    url: 订阅链接
-    #path: ./providers/subscription_slot_01.yaml #如果读取不到可直接删除这一行
-    interval: 3600
-    keep-alive-interval: 1800 
-    proxy: ♻️ 订阅更新
-    health-check:
-      enable: true
-      interval: 300
-      url: https://cp.cloudflare.com/generate_204
-    # [修复] 正则表达式加上单引号，防止导入时报错
-    exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
-    override:
-      additional-prefix: '[节点显示名1]'
-      # [证书校验] true=跳过验证(兼容性好/节点能通), false=严格验证(安全性高/节点易挂)
-      skip-cert-verify: true
-      udp: true
-  订阅显示名2:
-    type: http
-    url: 订阅链接
-    #path: ./providers/subscription_slot_02.yaml #如果读取不到可直接删除这一行
+    url: 订阅链接1
     interval: 3600
     keep-alive-interval: 1800
     proxy: ♻️ 订阅更新
@@ -40,11 +15,25 @@ proxy-providers:
       enable: true
       interval: 300
       url: https://cp.cloudflare.com/generate_204
-    # [修复] 正则表达式加上单引号
+    # [优化] 排除过滤器
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
-      additional-prefix: '[节点显示名2]'
-      # [证书校验] true=跳过验证(兼容性好/节点能通), false=严格验证(安全性高/节点易挂)
+      additional-prefix: '[订阅1]'
+      skip-cert-verify: true
+      udp: true
+  订阅2:
+    type: http
+    url: 订阅链接2
+    interval: 3600
+    keep-alive-interval: 1800
+    proxy: ♻️ 订阅更新
+    health-check:
+      enable: true
+      interval: 300
+      url: https://cp.cloudflare.com/generate_204
+    exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
+    override:
+      additional-prefix: '[订阅2]'
       skip-cert-verify: true
       udp: true
 
@@ -86,10 +75,6 @@ profile:
   store-selected: true
 
 unified-delay: true
-# [修正] 暂时注释掉 tcp-concurrent。
-# 原因：下方开启了 mux (多路复用)，这两者同时开启会在 Verge 导入时产生类型冲突报错。
-# 实际上 Meta 内核开启 Mux 后会自动接管并发，注释此行不影响性能，且能解决报错。
-# tcp-concurrent: true
 
 # [DNS 设置]
 dns:
@@ -98,41 +83,40 @@ dns:
   ipv6: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.0/16
-  respect-rules: true 
+  respect-rules: true
   use-hosts: true
   use-system-hosts: true
-  default-nameserver:
-    - 223.5.5.5
-    - 119.29.29.29
+  
+  # 默认 DNS (国内优选)
+  nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+  
+  # 代理 DNS (解析节点域名)
+  proxy-server-nameserver:
+    - https://dns.alidns.com/dns-query
+    - https://doh.pub/dns-query
+    
+  # 策略分流 (Meta 核心)
+  nameserver-policy:
+    "geosite:cn,private":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
+    "geosite:google,youtube,telegram,gfw,geolocation-!cn":
+      - https://8.8.8.8/dns-query
+      - https://1.1.1.1/dns-query
+
   fake-ip-filter:
     - +.lan
     - +.local
     - geosite:cn
-    - +.ifaner.dd94wan.com
     - stun.*
-    - stun.*.*
     - time.*
     - ntp.*
     - router.*
     - localhost
-    - '*.lan'
-    - '*.localdomain'
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
-    - 223.5.5.5
-    - 119.29.29.29
-  fallback:
-    - https://1.1.1.1/dns-query
-    - https://1.0.0.1/dns-query
-    - https://[2606:4700:4700::1111]/dns-query
-    - https://[2606:4700:4700::1001]/dns-query
-    - https://dns.google/dns-query
-    - tls://dns.google:853
-  proxy-server-nameserver:
-    - https://1.1.1.1/dns-query
-    - https://8.8.8.8/dns-query
-#   - 119.29.29.29   不希望有任何国内明文 DNS 出站可以删除这一项
+    - +.msftconnecttest.com
+    - +.msftncsi.com
 
 # [本地代理节点]
 proxies:
@@ -141,11 +125,11 @@ proxies:
   - name: 拒绝
     type: reject
 
-# [保留] MUX 多路复用 (需要的强悍功能)
+# [MUX 多路复用]
 mux:
   enable: true
   protocol: h2mux
-  max-connections: 16
+  max-connections: 8
   min-streams: 4
   padding: true
 
@@ -163,6 +147,7 @@ default:
     - 新加坡-故转
     - 韩国-故转
     - 美国-故转
+    - 德国-故转
     - 英国-故转
     - 小众地区-故转
     - 拒绝
@@ -174,14 +159,15 @@ default:
 proxy-groups:
   - name: ♻️ 订阅更新
     type: fallback
-    url: "https://www.gstatic.com/generate_204"
+    # [优化] 使用 Apple URL，防止fallback到直连时显示超时
+    url: "http://www.apple.com/library/test/success.html"
     interval: 300
-    proxies: 
-    #可以在下方自定义代理订阅组，默认先直连，直连失败后自动切换为下面分组
+    proxies:
       - 直连
       - 所有-自动
       - 香港-自动
       - 日本-自动
+      - 台湾-自动
   - icon: https://raw.githubusercontent.com/Koolson/Qure/master/IconSet/Color/ChatGPT.png
     name: AI（全）
     proxies: *id001
@@ -448,6 +434,30 @@ proxy-groups:
     timeout: 3000
     lazy: true
     url: https://cp.cloudflare.com/generate_204
+  - icon: https://raw.githubusercontent.com/Lanlan13-14/Rules/refs/heads/main/icon/Germany.png
+    interval: 300
+    lazy: false
+    name: 德国-故转
+    proxies:
+      - 德国-手动
+      - 德国-自动
+    type: fallback
+    url: https://cp.cloudflare.com/generate_204
+  - filter: (?=.*(德国|德|DE|Germany|🇩🇪)).*$
+    icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
+    include-all: true
+    name: 德国-手动
+    type: select
+  - filter: (?=.*(德国|德|DE|Germany|🇩🇪)).*$
+    icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
+    include-all: true
+    interval: 300
+    name: 德国-自动
+    tolerance: 50
+    type: url-test
+    timeout: 3000
+    lazy: true
+    url: https://cp.cloudflare.com/generate_204
   - icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/uk.png
     interval: 300
     lazy: false
@@ -481,12 +491,12 @@ proxy-groups:
       - 小众地区-自动
     type: fallback
     url: https://cp.cloudflare.com/generate_204
-  - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
+  - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|德国|德|DE|Germany|🇩🇪|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/iconselect96.png
     include-all: true
     name: 小众地区-手动
     type: select
-  - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
+  - filter: ^((?!(直连|拒绝|广港|香港|HK|Hong Kong|🇭🇰|HongKong|广台|台湾|台灣|TW|Tai Wan|🇹🇼|🇨🇳|TaiWan|Taiwan|广日|日本|JP|川日|东京|大阪|泉日|埼玉|沪日|深日|🇯🇵|Japan|广新|新加坡|SG|坡|狮城|🇸🇬|Singapore|广韩|韩国|韓國|KR|首尔|春川|🇰🇷|Korea|广美|美|US|纽约|波特兰|达拉斯|俄勒|凤凰城|费利蒙|拉斯|洛杉|圣何塞|圣克拉|西雅|芝加|🇺🇸|United States|德国|德|DE|Germany|🇩🇪|英国|UK|United Kingdom|伦敦|英|London|🇬🇧)).)*$
     icon: https://raw.githubusercontent.com/ifanrBook/ClashConfig/refs/heads/main/icon/auto.png
     include-all: true
     interval: 300
@@ -519,27 +529,18 @@ proxy-groups:
     lazy: true
     url: https://cp.cloudflare.com/generate_204
 
-# [Mihomo/Meta 专用锚点配置]
-rule-anchor:
-  class:
-    behavior: classical
-    format: text
-    interval: 86400
-    type: http
-  domain:
+# [规则提供者]
+rule-providers:
+  # [新增] 广告拦截规则源 (Meta 官方维护)
+  Ads:
     behavior: domain
     format: mrs
+    path: rules/Ads.mrs
+    url: https://gh-proxy.com/https://github.com/MetaCubeX/meta-rules-dat/raw/refs/heads/meta/geo/geosite/category-ads-all.mrs
     interval: 86400
     type: http
-  ip:
-    behavior: ipcidr
-    format: mrs
-    interval: 86400
-    type: http
-
-# [规则提供者]
-
-rule-providers:
+    download-detour: ♻️ 订阅更新
+  
   AI_Domain:
     behavior: domain
     download-detour: ♻️ 订阅更新
@@ -616,7 +617,7 @@ rule-providers:
     type: http
     behavior: classical
     format: text
-    path: ./rules/Emby_Domain.list
+    path: rules/Emby_Domain.list
     url: "https://gh-proxy.com/https://raw.githubusercontent.com/blackmatrix7/ios_rule_script/refs/heads/master/rule/Clash/Emby/Emby.list"
     interval: 86400
     download-detour: ♻️ 订阅更新
@@ -777,6 +778,16 @@ rule-providers:
 # 分流规则
 # ==============================================
 rules:
+  # [重点] 拒绝 UDP 443 (QUIC)，强制 Youtube/Netflix 走 TCP，从而享受 Mux 多路复用加速
+  - AND,((NETWORK,UDP),(DST-PORT,443)),拒绝
+
+  # [常规] NTP 和 STUN 直连
+  - AND,((NETWORK,UDP),(DST-PORT,123)),直连
+  - AND,((NETWORK,UDP),(DST-PORT,3478)),直连
+  
+  # [新增] 广告拦截
+  - RULE-SET,Ads,拒绝
+  
   - RULE-SET,Check_Domain,Check 测速
   - RULE-SET,AI_Domain,AI（全）
   - RULE-SET,GitHub_Domain,GitHub
@@ -816,8 +827,7 @@ tun:
   dns-hijack:
     - any:53
     - tcp://any:53
-#    - tcp://any:443
     - tcp://any:853
   auto-redirect: false
-  endpoint-independent-nat: true
-
+  endpoint-independent-nat: true```
+  
