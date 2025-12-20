@@ -20,7 +20,7 @@ proxy-providers:
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
       additional-prefix: '[订阅1]'
-      skip-cert-verify: false
+      skip-cert-verify: true
       udp: true
 
   订阅2:
@@ -36,7 +36,7 @@ proxy-providers:
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
       additional-prefix: '[订阅2]'
-      skip-cert-verify: false
+      skip-cert-verify: true
       udp: true
 
 # [基础设置]
@@ -919,3 +919,4 @@ tun:
     - tcp://any:853
   auto-redirect: false
   endpoint-independent-nat: true
+
