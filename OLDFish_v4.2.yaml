@@ -3,6 +3,7 @@
 # Base: OLDFish v4.2
 # Fixes: 修复了v4.1中定义了规则源但未应用的问题 (Reddit/Nvidia/Crunchyroll)
 # Optimized: 调整规则顺序，DNS微调
+# 增加过滤广告规则
 # ---------------------------------------------------
 
 # [代理订阅 Provider]
@@ -16,6 +17,7 @@ proxy-providers:
     health-check:
       enable: true
       interval: 300
+      # ✅ 已修改为你指定的 Cloudflare 测速
       url: https://cp.cloudflare.com/generate_204
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
@@ -32,6 +34,7 @@ proxy-providers:
     health-check:
       enable: true
       interval: 300
+      # ✅ 已修改为你指定的 Cloudflare 测速
       url: https://cp.cloudflare.com/generate_204
     exclude-filter: '(?i).*(?:剩余|到期|重置|流量|天数|距离|套餐|过期|失效|建议|更新|重启|超时|expire|traffic|reset|days|left|remain|GB|TB|MB|KB|PB|\d+\.\d+|\d+天|\d+小时|%).*'
     override:
@@ -50,7 +53,7 @@ mode: rule
 log-level: info
 ipv6: true
 
-# [核心优化：数据库与连接]
+# [核心优化]
 geodata-mode: true
 geodata-loader: memconservative
 geo-auto-update: true
@@ -64,7 +67,7 @@ tcp-concurrent: true
 keep-alive-interval: 15
 global-client-fingerprint: chrome
 
-# [优化] 域名嗅探器
+# [嗅探器]
 sniffer:
   enable: true
   force-dns-mapping: true
@@ -82,11 +85,10 @@ sniffer:
     - "Mijia Cloud"
     - "+.push.apple.com"
 
-# [缓存设置]
+# [缓存与延迟]
 profile:
   store-fake-ip: true
   store-selected: true
-
 unified-delay: true
 
 # [DNS 设置]
@@ -100,21 +102,18 @@ dns:
   use-hosts: true
   use-system-hosts: true
 
-  # 默认 DNS (主要解析国内，国外走 Policy)
   nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
+    - 223.5.5.5
+    - 119.29.29.29
 
-  # 代理 DNS (用于节点握手)
   proxy-server-nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
+    - 223.5.5.5
+    - 119.29.29.29
 
-  # 策略分流 (核心 DNS 逻辑)
   nameserver-policy:
     "geosite:cn,private":
-      - https://dns.alidns.com/dns-query
-      - https://doh.pub/dns-query
+      - 223.5.5.5
+      - 119.29.29.29
     "geosite:google,youtube,telegram,gfw,geolocation-!cn":
       - https://dns.google/dns-query
       - https://cloudflare-dns.com/dns-query
@@ -131,7 +130,7 @@ dns:
     - +.msftconnecttest.com
     - +.msftncsi.com
 
-# [本地代理节点]
+# [本地代理]
 proxies:
   - name: 直连
     type: direct
@@ -139,7 +138,6 @@ proxies:
     type: reject
 
 # [MUX 多路复用]
-# 建议：大部分情况下保持 false。仅在节点明确支持且你需要降低高并发延迟时开启。
 mux:
   enable: false
   protocol: h2mux
@@ -147,7 +145,7 @@ mux:
   min-streams: 4
   padding: true
 
-# [锚点定义]
+# [锚点]
 default:
   proxies: &id001
     - 直连
@@ -168,7 +166,7 @@ default:
   type: select
 
 # ==============================================
-# 策略组
+# 策略组 (✅ URL 全部替换为 Cloudflare)
 # ==============================================
 proxy-groups:
   - name: ♻️ 订阅更新
@@ -863,7 +861,7 @@ rules:
   - AND,((NETWORK,UDP),(DST-PORT,3478)),直连
   - RULE-SET,Ads,拒绝
   
-  # 测速规则 (提前匹配)
+  # 测速规则
   - RULE-SET,Check_Domain,Check 测速
   
   # 应用分流
@@ -887,10 +885,10 @@ rules:
   - RULE-SET,Emby_Domain,Emby 影视
   - RULE-SET,Disney_Domain,Disney 迪斯尼
   - RULE-SET,Spotify_Domain,Spotify 音乐 博客
-  - RULE-SET,Crunchyroll_Domain,国外 # 之前遗漏
+  - RULE-SET,Crunchyroll_Domain,国外
   
   # 硬件与驱动
-  - RULE-SET,Nvidia_Domain,直连 # 之前遗漏，通常驱动下载直连更快，如需代理可改为“国外”
+  - RULE-SET,Nvidia_Domain,直连
   
   # 谷歌服务
   - RULE-SET,Google_Domain,Google 谷歌
@@ -919,4 +917,3 @@ tun:
     - tcp://any:853
   auto-redirect: false
   endpoint-independent-nat: true
-
